@@ -1,0 +1,33 @@
+team,passer_player_name,total_passing_yards,total_touchdowns,total_interceptions,total_points_scored,total_points_allowed,avg_score_differential,total_wins,playoff_status
+Arizona Cardinals,Player 1,3820,24,12,291,274,17,10,Made Playoffs
+Atlanta Falcons,Player 2,3980,31,12,405,343,62,7,Missed Playoffs
+Baltimore Ravens,Player 3,3109,32,11,386,346,40,6,Missed Playoffs
+Buffalo Bills,Player 4,3439,19,11,388,299,89,10,Made Playoffs
+Carolina Panthers,Player 5,3499,27,12,331,373,-42,11,Made Playoffs
+Chicago Bears,Player 6,4888,25,12,392,273,119,12,Made Playoffs
+Cincinnati Bengals,Player 7,3306,36,20,372,346,26,9,Made Playoffs
+Cleveland Browns,Player 8,3751,30,10,336,353,-17,8,Missed Playoffs
+Dallas Cowboys,Player 9,3721,26,16,326,347,-21,11,Made Playoffs
+Denver Broncos,Player 10,3588,27,11,353,375,-22,7,Missed Playoffs
+Detroit Lions,Player 11,4834,34,8,387,306,81,6,Missed Playoffs
+Green Bay Packers,Player 12,3659,31,10,381,334,47,10,Made Playoffs
+Houston Texans,Player 13,4033,33,13,361,288,73,7,Missed Playoffs
+Indianapolis Colts,Player 14,3870,29,15,292,325,-33,8,Missed Playoffs
+Jacksonville Jaguars,Player 15,4165,30,12,333,300,33,7,Missed Playoffs
+Kansas City Chiefs,Player 16,3782,21,14,225,377,-152,8,Missed Playoffs
+Las Vegas Raiders,Player 17,3839,26,14,229,305,-76,9,Made Playoffs
+Los Angeles Chargers,Player 18,4057,37,9,362,323,39,9,Made Playoffs
+Los Angeles Rams,Player 19,4421,25,11,328,311,17,8,Missed Playoffs
+Miami Dolphins,Player 20,4171,28,11,400,326,74,5,Missed Playoffs
+Minnesota Vikings,Player 21,4006,33,8,299,307,-8,7,Missed Playoffs
+New England Patriots,Player 22,3304,30,12,297,397,-100,11,Made Playoffs
+New Orleans Saints,Player 23,4251,38,7,374,287,87,8,Missed Playoffs
+New York Giants,Player 24,4538,28,12,387,294,93,6,Missed Playoffs
+New York Jets,Player 25,3016,27,14,382,362,20,6,Missed Playoffs
+Philadelphia Eagles,Player 26,3368,28,14,337,328,9,11,Made Playoffs
+Pittsburgh Steelers,Player 27,3249,33,12,277,330,-53,9,Made Playoffs
+San Francisco 49ers,Player 28,4610,29,9,285,338,-53,8,Missed Playoffs
+Seattle Seahawks,Player 29,3548,25,13,348,328,20,5,Missed Playoffs
+Tampa Bay Buccaneers,Player 30,4180,29,16,387,326,61,7,Missed Playoffs
+Tennessee Titans,Player 31,4205,33,7,351,313,38,10,Made Playoffs
+Washington Commanders,Player 32,4623,25,12,354,364,-10,7,Missed Playoffs
