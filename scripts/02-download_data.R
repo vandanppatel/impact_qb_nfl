@@ -1,26 +1,18 @@
 #### Preamble ####
-# Purpose: Downloads and saves the data from [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 11 February 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Download and save NFL play-by-play data for the 2023 season
+# Author: Vandan Patel
+# Date: December 3, 2024
+# Contact: vandanp.patel@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
-
+# Pre-requisites: Install nflfastR package
 
 #### Workspace setup ####
-library(opendatatoronto)
+# Load required libraries
+library(nflfastR)
 library(tidyverse)
-# [...UPDATE THIS...]
 
-#### Download data ####
-# [...ADD CODE HERE TO DOWNLOAD...]
+#### Download play-by-play data for 2023 ####
+pbp_data_2023 <- load_pbp(2023)
 
-
-
-#### Save data ####
-# [...UPDATE THIS...]
-# change the_raw_data to whatever name you assigned when you downloaded it.
-write_csv(the_raw_data, "inputs/data/raw_data.csv") 
-
-         
+# Save the 2023 play-by-play data
+write_csv(pbp_data_2023, "data/01-raw_data/pbp_data_2023.csv")
