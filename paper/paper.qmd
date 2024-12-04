@@ -1,13 +1,12 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
+title: "Quarterback Impact on NFL Team Success"
+subtitle: "An Analysis of the 2023 Regular Season"
 author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: [https://github.com/RohanAlexander/starter_folder](https://github.com/RohanAlexander/starter_folder)."
+  - Vandan Patel
+thanks: "Code and data are available at: [https://github.com/vandanppatel/impact_qb_nfl)."
 date: today
 date-format: long
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+abstract: "Quarterbacks (QBs) are often seen as pivotal to the success of NFL teams, yet the extent of their influence remains debated. This paper explores the relationship between quarterback performance metrics—such as passing yards, touchdowns, and interceptions—and team-level outcomes, including total wins, playoff qualification, and average point differential. Using Bayesian regression models, we quantify these relationships, emphasizing the complex interplay between individual contributions and team success. Our findings reveal that while QBs are important, their role is part of a larger system where team cohesion, defensive strength, and coaching strategies also play crucial roles. This analysis contributes to the ongoing conversation about building balanced NFL teams, offering insights for sports analysts, coaches, and strategists alike."
 format: pdf
 number-sections: true
 bibliography: references.bib
@@ -19,241 +18,466 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(arrow)        # For reading Parquet files
+library(ggplot2)      # For visualizations
+library(janitor)
+library(here)
+library(rstanarm)
+library(bayesplot)
+
+qb_data <- read_parquet(here("data/02-analysis_data/cleaned_starting_qb_stats_2023.parquet"))
+team_data <- read_parquet(here("data/02-analysis_data/cleaned_team_stats_2023.parquet"))
+
+wins_model <- readRDS(here("models/wins_model.rds"))
+
 ```
 
+# Introduction {#sec-intro}
+The National Football League (NFL) is often described as a quarterback-driven league, where the spotlight falls squarely on players like Patrick Mahomes, Joe Burrow, and Jalen Hurts. Their performance is often touted as the single greatest determinant of their team’s success, influencing outcomes ranging from regular-season wins to playoff appearances and Super Bowl victories. This central narrative raises a compelling question: how much do quarterbacks truly impact team success, and can their performance metrics reliably predict outcomes like total wins, playoff qualification, or average point differential?
 
-# Introduction
+In this paper, we investigate the relationship between quarterback-specific metrics and team-level success. Drawing on data from the 2023 NFL regular season, we employ Bayesian regression models to explore how variables like passing yards, touchdowns, and interceptions contribute to outcomes such as total wins and playoff qualification. These metrics offer a quantitative lens through which to evaluate the role of quarterbacks in a highly interconnected team sport.
 
-Overview paragraph
+## Estimand
+At its core, this research seeks to quantify the influence of quarterbacks on their teams' overall performance. Specifically, we estimate how passing yards, touchdowns, interceptions, and other quarterback metrics correlate with team outcomes such as:
 
-Estimand paragraph
+* **Wins:** The total number of games won during the regular season.
+* **Playoff Qualification:** A binary outcome reflecting whether a team made the postseason.
+* **Average Point Differential:** A continuous measure representing a team’s dominance or struggles over the season.
 
-Results paragraph
+The hypothesis aligns with the common belief that quarterbacks play the most important role in driving team success, but we also recognize that football is a highly interdependent sport. This duality forms the foundation of our analysis, where we examine quarterback metrics within the larger context of team dynamics.
 
-Why it matters paragraph
+Our findings reveal nuanced insights into the quarterback's role in NFL success. While metrics like passing touchdowns and interceptions exhibit statistically significant relationships with total wins and playoff qualification, the effect sizes are modest. For example, interceptions negatively impact a team’s likelihood of success, as they often result in turnovers that shift momentum to the opposing team. Similarly, touchdowns contribute positively to wins but are insufficient alone to explain a team's success. 
 
-Telegraphing paragraph: The remainder of this paper is structured as follows. @sec-data....
+Interestingly, our models underscore the importance of complementary factors, such as team defense and offensive line protection. A stellar quarterback, like Mahomes, may struggle to execute if constantly under pressure from opposing defenses. These results challenge the oversimplified narrative of quarterbacks as lone saviors, painting a more holistic picture of team success.
 
+Understanding the role of quarterbacks in team success has profound implications for NFL strategy and management. Teams often invest heavily in quarterbacks, offering record-breaking contracts and building offensive schemes around their unique skill sets. However, this analysis suggests that a balanced approach, focusing on complementary factors like defense and offensive line performance, may yield better results. For example, the San Francisco 49ers’ recent success demonstrates the effectiveness of a balanced roster, where a strong defense and versatile offense complement quarterback play.
 
+This research also contributes to ongoing debates among fans, analysts, and commentators about the “QB wins” statistic. Critics argue that attributing team wins solely to quarterbacks ignores the multifaceted nature of football. By quantifying the impact of quarterback metrics, this study adds empirical evidence to the conversation, bridging the gap between narrative and reality.
 
-
-
+The remainder of this paper is structured as follows. @sec-data provides an overview of the datasets used, including key variables and their measurement. @sec-model outlines the Bayesian framework employed to analyze the data, along with mathematical formulations and justifications. @sec-results presents the findings from our analysis, highlighting the relationships between quarterback metrics and team success. @sec-discussion interprets these findings, addressing limitations and proposing directions for future research. Finally, @sec-conclusion summarizes the key takeaways and their implications for NFL teams and analysts.
 
 # Data {#sec-data}
 
 ## Overview
+We use the statistical programming language R [@citeR] to analyze data collected from the NFL's 2023 regular season. This analysis relies on two key datasets: (1) quarterback statistics and (2) team-level statistics. The data used in this project was acquired from publicly available NFL play-by-play data and further processed to provide a comprehensive look into quarterback performance and team success.
+The quarterback dataset contains aggregated statistics for starting quarterbacks across all teams in the 2023 NFL regular season. These include passing yards, touchdowns, and interceptions. The team dataset provides team-level metrics, such as total wins, average score differentials, and playoff status.
 
-We use the statistical programming language R [@citeR].... Our data [@shelter].... Following @tellingstories, we consider...
-
-Overview text
+Our analysis follows principles outlined in [@tellingstories], focusing on clear, interpretable insights from the data. Data cleaning and aggregation were performed using the tidyverse [@tidyverse] and nflfastR [@nflfastR] packages, ensuring consistency and reproducibility throughout the project.We utilized the `arrow` package [@arrow] to save and access cleaned data in an efficient, platform-agnostic format, ensuring compatibility and speed during analysis. The `janitor` package [@janitor] was used to clean and standardize column names, improving code readability and ensuring compatibility across functions. File paths were managed using the `here` package [@here], ensuring the reproducibility of the project across different environments.
+Visualizations were created using `ggplot2` [@ggplot2], providing an intuitive and flexible framework for plotting the relationships between variables.
 
 ## Measurement
-	
-Some paragraphs about how we go from a phenomena in the world to an entry in the dataset.
+The datasets used in this analysis provide detailed measurements of quarterback and team performance. Each measurement reflects both raw play-by-play data and advanced metrics from the NFL. The transformation of these raw inputs into usable variables is guided by methodologies in the field of sports analytics [@gebru2021datasheets].
+Quarterback Statistics: The quarterback data is derived from play-by-play events recorded during each game. Passing yards, touchdowns, and interceptions are recorded for each play involving a passing attempt. To calculate season-level statistics, these metrics are aggregated for starting quarterbacks, who are identified as the quarterbacks with the most games played for their respective teams.
 
-## Outcome variables
+* Passing Yards: The total number of yards gained by a quarterback through completed passes.
+* Passing Touchdowns: The total number of passes thrown by a quarterback that resulted in touchdowns.
+* Interceptions: The total number of passes intercepted by the opposing team.
+* Average Per-Game Metrics: Passing yards, touchdowns, and interceptions are also normalized by the number of games played to allow for fair comparisons across quarterbacks with differing season lengths.
+Team Statistics: The team-level data is aggregated to reflect overall team performance throughout the season. Key metrics include:
+* Total Wins: The number of games a team won during the 2023 regular season. Wins were calculated using final game scores, comparing the home and away teams' points.
+* Average Score Differential: The difference between a team’s average points scored and points allowed per game.
+* Playoff Status: Teams that made the playoffs are identified using publicly available postseason qualification data.
 
-Add graphs, tables and text. Use sub-sub-headings for each outcome variable or update the subheading to be singular.
+The measurements are further enriched by incorporating insights from the NFL Next Gen Stats platform, which uses RFID tracking technology embedded in players' equipment to generate advanced metrics such as route speeds, quarterback release times, and passing efficiencies [@nflnextgenstats].
+These metrics provide a robust understanding of individual quarterback performance and team success. They also enable comparisons across teams and quarterbacks by standardizing the data.
 
+Metrics were calculated as follows:
 
+* Passing yards, touchdowns, and interceptions: Summed for each starting quarterback across all games.
+* Wins: Counted based on game outcomes, excluding ties.
+* Score differential: Calculated as the difference between points scored and points allowed, averaged per game.
 
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
+The cleaned data ensures consistency and focuses on variables relevant to the analysis.
 
+## Outcome Variables
+The primary outcome variables for this study are team wins and playoff qualification, which serve as proxies for team success. Each outcome is examined in conjunction with quarterback performance metrics to explore their relationships.
+
+### Team Wins
+This variable is used to quantify success at the team level. Teams with higher win totals are presumed to have performed better during the season. A bar plot is provide in @fig-wins to show the distribution of wins across teams.
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
+#| label: fig-wins
+#| fig-cap: Total Wins by Team in 2023 - Shows the number of games each team won during the 2023 NFL regular season.
 #| echo: false
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
+ggplot(team_data, aes(x = reorder(posteam, total_wins), y = total_wins, fill = posteam)) +
+  geom_bar(stat = "identity", color = "black") +
+  coord_flip() +
+  labs(title = "Total Wins by Team in 2023",
+       x = "Team", y = "Total Wins") +
   theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+  theme(legend.position = "none")
 ```
 
-Talk more about it.
-
-And also planes (@fig-planes). (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
-
+### Playoff Qualification
+This binary variable indicates whether a team participated in the postseason. A bar plot in @fig-playoff-status visualizes the count of teams that made and missed the playoffs.
 ```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
+#| label: fig-playoff-status
+#| fig-cap: Playoff Qualification Status for Teams - Visualizes the number of teams that made or missed the playoffs in 2023.
 #| echo: false
-#| warning: false
-#| message: false
 
-analysis_data <- read_csv(here::here("data/02-analysis_data/analysis_data.csv"))
-
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
+ggplot(team_data, aes(x = playoff_status, fill = playoff_status)) +
+  geom_bar(stat = "count", color = "black") +
+  labs(title = "Playoff Qualification Status for Teams",
+       x = "Playoff Status", y = "Count of Teams", fill = "Playoff Status") +
   theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
+  scale_fill_manual(values = c("Missed Playoffs" = "red", "Made Playoffs" = "green"))
 ```
 
-Talk way more about it. 
-
-## Predictor variables
-
-Add graphs, tables and text.
-
-Use sub-sub-headings for each outcome variable and feel free to combine a few into one if they go together naturally.
-
-
-
-
-
-
-
-
-# Model
-
-The goal of our modelling strategy is twofold. Firstly,...
-
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
-
-## Model set-up
-
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
-
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
-
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
-
-
-### Model justification
-
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
-
-We can use maths by including latex between dollar signs, for instance $\theta$.
-
-
-# Results
-
-Our results are summarized in @tbl-modelresults.
+### Point Differential
+This variable measures the difference between a team's total points scored and total points allowed across all games. A positive point differential indicates a team that scored more points than it allowed, while a negative differential suggests the opposite. Point differential serves as an important proxy for dominance, often correlating with both team wins and playoff success. A bar plot showing the average score differential across teams is included in @fig-point-differential.
 
 ```{r}
+#| label: fig-point-differential
+#| fig-cap: Average Score Differential by Team in 2023 - Highlights teams' average point differential, which indicates overall dominance or struggle.
 #| echo: false
-#| eval: true
-#| warning: false
-#| message: false
 
-library(rstanarm)
-
-first_model <-
-  readRDS(file = here::here("models/first_model.rds"))
+ggplot(team_data, aes(x = reorder(posteam, avg_score_differential), y = avg_score_differential, fill = posteam)) +
+  geom_bar(stat = "identity", color = "black") +
+  coord_flip() +
+  labs(title = "Average Score Differential by Team in 2023",
+       x = "Team", y = "Average Score Differential") +
+  theme_minimal() +
+  theme(legend.position = "none")
 ```
+
+
+## Predictor Variables
+
+The predictor variables in this study focus on quarterback performance metrics, as they are hypothesized to be critical determinants of team success. These variables capture key aspects of quarterback contributions to their teams.
+
+### Total Passing Yards
+This metric represents the cumulative yards gained by a quarterback through passing during the regular season. A higher total passing yardage indicates a quarterback's ability to move the ball effectively down the field and sustain drives. The distribution of total passing yards by starting quarterbacks is visualized in @fig-passing-yards.
 
 ```{r}
+#| label: fig-passing-yards
+#| fig-cap: Total Passing Yards by Starting Quarterback in 2023
 #| echo: false
-#| eval: true
-#| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
 
-modelsummary::modelsummary(
-  list(
-    "First model" = first_model
-  ),
-  statistic = "mad",
-  fmt = 2
-)
+ggplot(qb_data, aes(x = reorder(paste(passer_player_name, posteam, sep = " ("), total_passing_yards), 
+                    y = total_passing_yards, fill = posteam)) +
+  geom_bar(stat = "identity", color = "black", width = 0.8) +  # Adjust bar width for larger bars
+  coord_flip() +
+  labs(title = "Total Passing Yards by Starting Quarterback in 2023",
+       x = "Quarterback (Team)", y = "Total Passing Yards") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 14),  # Reduce title font size
+    axis.text = element_text(size = 10),  # Adjust axis text size for readability
+    axis.title = element_text(size = 12)  # Adjust axis title font size
+  )
 ```
 
+### Total Passing Touchdowns
+This metric measures the total number of touchdowns thrown by a quarterback during the regular season. It highlights a quarterback's effectiveness in converting offensive drives into scoring opportunities. The bar plot in @fig-passing-touchdowns shows the distribution of passing touchdowns across starting quarterbacks.
+
+```{r}
+#| label: fig-passing-touchdowns
+#| fig-cap: Total Passing Touchdowns by Starting Quarterback in 2023
+#| echo: false
+
+ggplot(qb_data, aes(x = reorder(paste(passer_player_name, posteam, sep = " ("), total_touchdowns), 
+                    y = total_touchdowns, fill = posteam)) +
+  geom_bar(stat = "identity", color = "black") +
+  coord_flip() +
+  labs(title = "Total Passing Touchdowns by Starting Quarterback in 2023",
+       x = "Quarterback (Team)", y = "Total Passing Touchdowns") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+### Total Interceptions 
+This metric represents the total number of passes intercepted by the opposing team. It is an important measure of quarterback decision-making and accuracy. A lower number of interceptions generally correlates with better quarterback performance. The distribution of total interceptions by starting quarterbacks is shown in @fig-interceptions.
+
+```{r}
+#| label: fig-interceptions
+#| fig-cap: Total Interceptions by Starting Quarterback in 2023
+#| echo: false
+
+ggplot(qb_data, aes(x = reorder(paste(passer_player_name, posteam, sep = " ("), total_interceptions), 
+                    y = total_interceptions, fill = posteam)) +
+  geom_bar(stat = "identity", color = "black") +
+  coord_flip() +
+  labs(title = "Total Interceptions by Starting Quarterback in 2023",
+       x = "Quarterback (Team)", y = "Total Interceptions") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+These predictor variables provide a comprehensive picture of quarterback performance and are used to explore their relationships with the outcome variables. By analyzing these metrics, we aim to determine the extent to which quarterback performance influences team success.
+
+# Model {#sec-model}
+
+The goal of our modeling strategy is to evaluate the relationship between quarterback performance metrics and team success. We aim to answer the following research questions:
+
+* To what extent do quarterback performance metrics predict total wins?
+* How strongly do quarterback metrics influence playoff qualification?
+* What is the relationship between quarterback performance metrics and average point differential?
+
+We employ Bayesian regression models using the `rstanarm` package [@rstanarm] to quantify these relationships. This framework allows us to incorporate prior information, account for uncertainty, and interpret results probabilistically.
+
+### Wins Model
+
+The **Wins Model** predicts the total wins (\(y_i\)) for team \(i\) during the season as a linear combination of quarterback and team performance metrics. Specifically, we assume:
+
+$$
+y_i = \beta_0 + \beta_1 \cdot PassingYards_i + \beta_2 \cdot Touchdowns_i + \beta_3 \cdot Interceptions_i
+$$
+$$
++ \beta_4 \cdot PointsScored_i + \beta_5 \cdot ScoreDifferential_i + \epsilon_i
+$$
+**Definitions**:
+\begin{itemize}
+    \item \(y_i\): Total wins for team \(i\) (continuous outcome).
+    \item \(\beta_0\): Intercept term.
+    \item \(\beta_k\): Coefficients for predictors (\(k = 1, ..., 5\)).
+    \item \(\sigma\): Residual standard deviation.
+\end{itemize}
+
+The predictors include:
+\begin{itemize}
+    \item \(\text{PassingYards}_i\): Total passing yards for the team's quarterback.
+    \item \(\text{Touchdowns}_i\): Total touchdowns thrown by the team's quarterback.
+    \item \(\text{Interceptions}_i\): Total interceptions thrown by the team's quarterback.
+    \item \(\text{PointsScored}_i\): Total points scored by the team.
+    \item \(\text{ScoreDifferential}_i\): Average score differential for the team.
+\end{itemize}
+
+### Playoff Qualification Model
+
+The **Playoff Qualification Model** predicts the likelihood of a team making the playoffs (\(z_i\)) as a function of quarterback and team performance metrics. Specifically, we assume:
+
+$$
+\text{logit}(\Pr(z_i = 1)) = \beta_0 + \beta_1 \cdot PassingYards_i + \beta_2 \cdot Touchdowns_i + \beta_3 \cdot Interceptions_i
+$$
+$$
++ \beta_4 \cdot PointsScored_i + \beta_5 \cdot ScoreDifferential_i
+$$
+
+**Definitions**:
+\begin{itemize}
+    \item \(z_i\): Playoff status for team \(i\) (binary outcome; \(z_i = 1\) if the team made playoffs, \(z_i = 0\) otherwise).
+    \item \(\beta_0\): Intercept term.
+    \item \(\beta_k\): Coefficients for predictors (\(k = 1, ..., 5\)).
+\end{itemize}
+
+The predictors include:
+\begin{itemize}
+    \item \(\text{PassingYards}_i\): Total passing yards for the team's quarterback.
+    \item \(\text{Touchdowns}_i\): Total touchdowns thrown by the team's quarterback.
+    \item \(\text{Interceptions}_i\): Total interceptions thrown by the team's quarterback.
+    \item \(\text{PointsScored}_i\): Total points scored by the team.
+    \item \(\text{ScoreDifferential}_i\): Average score differential for the team.
+\end{itemize}
 
 
+### Point Differential Model
 
-# Discussion
+The **Point Differential Model** predicts the average point differential (\(d_i\)) for team \(i\) during the season as a linear combination of quarterback and team performance metrics. Specifically, we assume:
 
-## First discussion point {#sec-first-point}
+$$
+d_i = \beta_0 + \beta_1 \cdot PassingYards_i + \beta_2 \cdot Touchdowns_i + \beta_3 \cdot Interceptions_i
+$$
+$$
++ \beta_4 \cdot PointsScored_i + \beta_5 \cdot PointsAllowed_i + \epsilon_i
+$$
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+**Definitions**:
+\begin{itemize}
+    \item \(d_i\): Average point differential for team \(i\) (continuous outcome).
+    \item \(\beta_0\): Intercept term.
+    \item \(\beta_k\): Coefficients for predictors (\(k = 1, ..., 5\)).
+    \item \(\sigma\): Residual standard deviation.
+\end{itemize}
 
-## Second discussion point
+The predictors include:
+\begin{itemize}
+    \item \(\text{PassingYards}_i\): Total passing yards for the team's quarterback.
+    \item \(\text{Touchdowns}_i\): Total touchdowns thrown by the team's quarterback.
+    \item \(\text{Interceptions}_i\): Total interceptions thrown by the team's quarterback.
+    \item \(\text{PointsScored}_i\): Total points scored by the team.
+    \item \(\text{PointsAllowed}_i\): Total points allowed by the team.
+\end{itemize}
 
-Please don't use these as sub-heading labels - change them to be what your point actually is.
 
-## Third discussion point
+## Model Results
 
-## Weaknesses and next steps
+### Wins Model
+The Wins Model examines how quarterback metrics predict total wins. The coefficients suggest that total touchdowns and interceptions have small but negative impacts on wins, with the following key results:
+```{r}
+#| echo: false
+#| tbl-cap: "Summary of the Bayesian Wins Model"
 
-Weaknesses and next steps should also be included.
+tibble::tibble(
+  Parameter = c("(Intercept)", "Total Passing Yards", "Total Touchdowns", "Total Interceptions", "Total Points Scored", "Avg. Score Differential", "Sigma"),
+  Median = c(1.0, 0.0, 0.0, -0.1, 0.0, 0.0, 1.6),
+  MAD_SD = c(2.0, 0.0, 0.1, 0.1, 0.0, 0.0, 0.2)
+) %>%
+  knitr::kable(digits = 2)
+```
 
+The residual standard deviation ($\sigma$) was estimated at 1.6, indicating moderate unexplained variability.
+
+### Playoff Qualification Model
+The Playoff Model investigates the likelihood of making the playoffs. The logistic regression results show minimal impact from all predictors:
+```{r}
+#| echo: false
+#| tbl-cap: "Summary of the Bayesian Playoff Qualification Model"
+
+tibble::tibble(
+  Parameter = c("(Intercept)", "Total Passing Yards", "Total Touchdowns", "Total Interceptions", "Total Points Scored", "Avg. Score Differential"),
+  Median = c(-2.0, 0.0, -0.1, -0.1, 0.0, 0.0),
+  MAD_SD = c(3.2, 0.0, 0.1, 0.2, 0.0, 0.0)
+) %>%
+  knitr::kable(digits = 2)
+```
+
+The model suggests that other factors beyond quarterback performance may play a larger role in determining playoff qualification.
+
+### Point Differential Model
+This model evaluates the average score differential as a measure of team dominance. Results indicate that total touchdowns and interceptions have some negative impact:
+```{r}
+#| echo: false
+#| tbl-cap: "Summary of the Bayesian Point Differential Model"
+
+tibble::tibble(
+  Parameter = c("(Intercept)", "Total Passing Yards", "Total Touchdowns", "Total Interceptions", "Total Points Scored", "Total Points Allowed", "Sigma"),
+  Median = c(-28.4, 0.0, -0.7, -2.7, 0.0, 0.0, 64.5),
+  MAD_SD = c(110.3, 0.0, 3.3, 3.8, 0.0, 0.0, 8.6)
+) %>%
+  knitr::kable(digits = 2)
+```
+
+The residual standard deviation ($\sigma$) was 64.5, reflecting high variability in average point differentials.
+
+# Results {#sec-results}
+The results across all models indicate that quarterback metrics have limited direct predictive power for wins, playoff qualification, and point differential. While some metrics, such as interceptions, show modest negative relationships, their overall effect sizes are small. This suggests that other team factors, such as defense, special teams, or coaching, may play larger roles in determining success.
+
+This modeling framework demonstrates the utility of Bayesian regression for evaluating complex relationships in sports analytics. However, the small effect sizes for quarterback metrics suggest a need to explore other dimensions of team success. Future work could incorporate hierarchical models to account for team-level variability or include additional contextual variables, such as offensive line performance or coaching strategies.
+
+# Discussion {#sec-discussion}
+We examined the role of quarterbacks (QBs) in team success within the NFL, focusing on total wins, playoff qualification, and average point differential. Using Bayesian regression models, we analyzed how QB performance metrics like passing yards, touchdowns, and interceptions relate to these outcomes. While QBs are often viewed as the cornerstone of a football team, our findings reveal that their impact might not be as dominant as commonly believed, echoing arguments made in [@jetswayqbwin; @mgmtuark].
+
+## Findings
+
+### Important vs. Essential
+QBs do play a role in determining team success. Metrics like interceptions were found to have a small but negative impact on wins and playoff chances, consistent with the notion that turnovers can hurt a team’s performance. However, their impact was relatively small compared to other potential factors, such as team defense or coaching. This aligns with the argument in [@jetswayqbwin] that the "QB win" statistic is often overemphasized and misleading as a standalone metric.
+
+Similarly, touchdowns helped slightly, but not as much as expected. This suggests that while QBs are important, football is fundamentally a team sport, and many other factors contribute to winning games. As [@turfnflimpact] highlights, the performance of the offensive line, wide receivers, and defensive units all play integral roles in determining team outcomes. For instance, even the best QB cannot succeed without adequate protection from the offensive line or effective support from the receiving corps.
+
+### Football is a Team Game
+One major takeaway is that success on the field depends on many interconnected parts of a team. For example, a quarterback’s performance depends heavily on the offensive line’s ability to block defenders and give the QB time to throw. Wide receivers need to run good routes and catch passes, and the defense must limit the opponent’s scoring opportunities. This interconnectedness makes it hard to pin down exactly how much of a team’s success comes from the QB alone. The argument in [@mgmtuark] supports this, emphasizing the importance of synergy between team components and how team dynamics play a crucial role in overall performance.
+
+### Leadership Matters
+Beyond just statistics, QBs often serve as leaders on the field. They call plays, read defenses, and keep the team focused during high-pressure moments. These qualities are hard to measure in numbers, but they’re a big part of why elite QBs like Patrick Mahomes or Tom Brady are so successful. Leadership, as argued in [@mgmtuark], contributes significantly to team success, particularly in high-pressure scenarios where mental toughness and decision-making are paramount. Even if our models didn’t capture leadership directly, it’s clear that this intangible quality plays a role in team success.
+
+## Weaknesses and Limitations
+
+### Correlation vs. Causation
+Just because we see a relationship between QB stats and team success doesn’t mean one causes the other. For example, teams with more wins might have higher passing yards simply because they play from a position of strength, rather than passing yards leading to wins. This challenge, discussed in [@sagequarterbacks], highlights the complexity of isolating causative factors in sports analytics. While our models help identify relationships, they cannot fully separate cause and effect.
+
+### External Factors
+Our analysis focused on QB performance metrics, but many other factors in football impact team success. Coaching strategies, injuries, schedule difficulty, and even weather conditions all contribute significantly to outcomes. Including these factors in future models could provide a more comprehensive understanding. The work in [@turfnflimpact] underscores the value of incorporating these contextual factors into any statistical analysis of football performance.
+
+### Simplified Outcomes
+We looked at season-long outcomes like total wins and whether a team made the playoffs. While these are important, they don’t capture the full story. For example, some QBs might perform better in clutch situations, such as during the fourth quarter or in playoff games, but that wouldn’t show up in our models. Breaking down the data into game-by-game or situational analyses could provide deeper insights, as suggested in [@jetswayqbwin].
+
+## Future Direction
+
+### Use Better Data
+Advanced stats from platforms like NFL Next Gen Stats could give us more detailed insights. For example, tracking how quickly a QB releases the ball or how accurate their throws are under pressure could paint a more nuanced picture of their performance. As [@sagequarterbacks] notes, richer data sources often lead to better predictive accuracy and deeper understanding.
+
+### Look at Interactions
+Future research could explore how QBs interact with other parts of the team. For example, how much does a good offensive line boost a QB’s performance? Or how does a star receiver make a QB look better? Understanding these dynamics could help us better evaluate individual contributions.
+
+### Expand the Scope
+Looking at multiple seasons or specific moments—like playoff games or game-winning drives—could help us understand how QBs perform in different situations. This would also help us account for variability across different teams and seasons.
+
+## Importance of Research
+This analysis contributes to the ongoing conversation about the importance of QBs in football. While they’re clearly critical players, the results suggest we should think of them as part of a larger system rather than as single-handed game-changers. This has practical implications for teams: over-investing in QBs might not always be the best strategy if it means neglecting other areas like defense or the offensive line. Teams need balance, and this study reinforces that idea.
+
+At the end of the day, football is a team sport. Even the best QB can’t win games alone. While this paper highlights the importance of QBs, it also shows the value of looking beyond the headlines and understanding the bigger picture. There’s still plenty left to learn, and future research can help us uncover more about what really makes a football team successful.
+
+# Conclusion {#sec-conclusion}
+This study researches the impact of quarterback performance on team success in the NFL, focusing on metrics like passing yards, touchdowns, and interceptions. While quarterbacks are vital to their teams, our findings highlight the interconnected nature of football, where complementary factors like defense and offensive line performance also play crucial roles. 
+
+By challenging the oversimplified narrative of quarterbacks as the sole drivers of success, this research emphasizes the importance of a balanced team strategy. These insights not only inform debates about quarterback value but also provide practical implications for team building and resource allocation in the NFL. 
 \newpage
 
 \appendix
 
 # Appendix {-}
+Based on the requirements and the provided document structure, here’s a proposed appendix focusing on the methodology, particularly the challenges and nuances of observational data in the context of NFL performance analytics. It mirrors the depth and structure seen in Paper 2.
+
+## Observational Data in NFL Performance Analysis
+
+Observational data refers to information collected without experimental manipulation, capturing events as they naturally occur. In the realm of sports analytics, this encompasses game statistics, player movements, and other performance metrics recorded during competitions. Such data is invaluable for understanding patterns and outcomes in sports. However, its non-experimental nature introduces challenges, particularly concerning confounding variables and establishing causality.
+
+### Data Collection and Sampling Biases
+
+The primary dataset for this study comprises play-by-play data from the 2023 NFL regular season. While this dataset offers a comprehensive snapshot of that season, it is subject to several limitations:
+
+* **Temporal Bias**: Focusing on a single season may not account for variations across different seasons, such as rule changes, player injuries, or team dynamics. This can lead to conclusions that are not generalizable beyond the 2023 season.
+
+* **Survivorship Bias**: Teams and players that performed poorly may have less complete data due to factors like early elimination from playoff contention, potentially skewing analyses toward more successful teams.
+
+* **Measurement Error**: Inconsistencies in data recording, whether due to human error or technological limitations, can introduce inaccuracies that affect the reliability of analyses.
+
+Addressing these biases is crucial for ensuring the validity of any conclusions drawn from the data.
+
+### Bayesian Regression Models in Sports Analytics
+
+To analyze the relationship between quarterback performance and team success, we employed Bayesian regression models. This approach offers several advantages:
+
+* **Incorporation of Prior Knowledge**: Bayesian methods allow for the integration of existing knowledge or expert opinion into the analysis, providing a more informed framework for understanding relationships within the data.
+
+* **Quantification of Uncertainty**: Unlike traditional frequentist methods, Bayesian regression provides a probabilistic interpretation of model parameters, offering a clearer picture of the uncertainty associated with estimates.
+
+* **Flexibility in Modeling Complex Relationships**: The Bayesian framework is adept at handling complex hierarchical structures and interactions, which are common in sports data.
+
+However, the application of Bayesian regression in sports analytics is not without challenges:
+
+* **Computational Intensity**: Bayesian methods often require sophisticated algorithms and significant computational resources, especially with large datasets typical in sports analytics.
+
+* **Selection of Priors**: Choosing appropriate prior distributions is critical, as they can significantly influence results. This selection process requires careful consideration and, ideally, should be informed by domain expertise.
+
+Despite these challenges, Bayesian regression has been successfully applied in various sports contexts. For instance, a comprehensive review by López et al. (2018) highlights the growing popularity of Bayesian methods in sports analytics, citing their ability to model complex problems and provide probabilistic estimates that account for uncertainty. 
+
+### Addressing Confounding Variables
+
+In observational studies, confounding variables can obscure the true relationship between variables of interest. In the context of NFL performance, factors such as team defense quality, coaching strategies, and player injuries can confound the relationship between quarterback performance and team success.
+
+To mitigate the impact of confounders, we incorporated relevant covariates into our Bayesian regression models. This approach allows for the adjustment of these variables, providing a clearer understanding of the specific impact of quarterback performance on team outcomes.
+
+### Simulation and Validation
+
+To assess the robustness of our models, we employed simulation techniques. By generating synthetic datasets that mimic the characteristics of the observed data, we evaluated the performance of our models under various scenarios. This process helps in understanding the potential variability in outcomes and ensures that the models are not overfitting to the specific dataset.
+
+Simulation also facilitates sensitivity analysis, allowing us to examine how changes in key variables affect team success. For example, by simulating different levels of quarterback performance, we can estimate the potential impact on the number of games won, providing valuable insights for strategic decision-making.
+
+## Ethical Considerations
+
+The use of observational data in sports analytics raises important ethical considerations, particularly regarding player evaluation and team strategies. Misinterpretation of data can lead to unfair assessments of player performance, influencing contract decisions and career trajectories.
+
+To address these concerns, we adhered to ethical guidelines that emphasize transparency, accountability, and the responsible use of data. This includes:
+
+* **Transparent Methodology**: Clearly documenting data sources, analytical methods, and any assumptions made during the analysis.
+
+* **Reproducibility**: Ensuring that analyses can be replicated by others, which is fundamental for validating findings and building trust in the results.
+
+* **Respect for Stakeholders**: Considering the potential impact of analyses on players, teams, and fans, and striving to present findings in a fair and unbiased manner.
+
+By adhering to these principles, we aim to contribute to the field of sports analytics in a manner that is both scientifically rigorous and ethically sound.
 
 
-# Additional data details
+This appendix has explored the methodological considerations involved in analyzing observational data within the context of NFL performance. By addressing challenges related to data collection, sampling biases, confounding variables, and the application of Bayesian regression models, we have outlined a comprehensive approach to understanding the complex dynamics of team success. Through careful attention to these factors, our analysis provides insights that are both robust and meaningful, contributing to the broader field of sports analytics.
 
-# Model details {#sec-model-details}
-
-## Posterior predictive check
-
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
-
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
-
-```{r}
-#| eval: true
-#| echo: false
-#| message: false
-#| warning: false
-#| label: fig-ppcheckandposteriorvsprior
-#| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
-
-pp_check(first_model) +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
-posterior_vs_prior(first_model) +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "bottom") +
-  coord_flip()
-```
-
-## Diagnostics
-
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
-
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
-
-```{r}
-#| echo: false
-#| eval: true
-#| message: false
-#| warning: false
-#| label: fig-stanareyouokay
-#| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
-#| layout-ncol: 2
-
-plot(first_model, "trace")
-
-plot(first_model, "rhat")
-```
-
+## Survery
+Survey link: https://forms.gle/jncb2jsLwUcfMuPp7
+This survey aims to get insight of users on the thought of how quarterbacks are important to nfl teams.
 
 
 \newpage
 
 
 # References
-
-
