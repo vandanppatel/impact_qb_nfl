@@ -1,8 +1,8 @@
 ##### Preamble ####
 # Purpose: Simulates a dataset of NFL teams and quarterbacks
-# Author: [Your Name]
-# Date: [Current Date]
-# Contact: [Your Email]
+# Author: Vandan Patel
+# Date: December 3, 2024
+# Contact: vandanp.patel@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: The `tidyverse` package must be installed
 # Any other information needed? Simulated dataset reflects key metrics for analysis
