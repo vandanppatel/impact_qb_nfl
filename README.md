@@ -14,7 +14,7 @@ strategists alike.
 
 The repo is structured as:
 
--   `data/pbp_data_2023.csv.zip` contains the raw data as obtained from nflfastR, simulated data and data used to perform analysis. Note that data/01-raw_data/pbp_data_2023.csv.zip should be unzipped before running the code. 
+-   `data` contains the raw data as obtained from nflfastR, simulated data and data used to perform analysis. Note that data/01-raw_data/pbp_data_2023.csv.zip should be unzipped before running the code. 
 -   `model` contains fitted models. 
 -   `other` contains relevant sketches.
 -   `paper` contains the files used to generate the paper, including the Quarto document and reference bibliography file, as well as the PDF of the paper. 
